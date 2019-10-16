@@ -1,0 +1,2 @@
+# paddle_youtube
+使用百度Paddle框架进行视频分类算法NeXtVLAD视频分类模型。
