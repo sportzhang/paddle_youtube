@@ -107,115 +107,109 @@ curl data.yt8m.org/download.py | shard=1,100 partition=2/frame/train mirror=us p
  - 备注：由于Youtube-8M数据集中test部分的数据没有标签，所以此处使用validate数据做模型评估。
 
  #### 通过train.py快速进行训练
- - 方式一
 
  ```
  export CUDA_VISIBLE_DEVICES=0
  python train.py --model_name=NEXTVLAD \
-                 --config=./configs/nextvlad.yaml \
-		                 --log_interval=10 \
-				                 --valid_interval=1 \
-						                 --use_gpu=True \
-								                 --save_dir=./data/checkpoints \
-										                 --fix_random_seed=False
-												 ```
-												 - 方式二
+		--config=./configs/nextvlad.yaml \
+		--log_interval=10 \
+		--valid_interval=1 \
+		--use_gpu=True \
+		--save_dir=./data/checkpoints \
+		 --fix_random_seed=False
+		
+		bash run.sh train NEXTVLAD ./configs/nextvlad.yaml
+ ```
 
-												 ```
-												 bash run.sh train NEXTVLAD ./configs/nextvlad.yaml
-												 ```
+ nextvlad.yaml文件中指定了模型以及训练相关的参数：
 
-												 nextvlad.yaml文件中指定了模型以及训练相关的参数：
+```
+epoch: 6  # 迭代次数
+learning_rate: 0.0002  # 学习率
+lr_boundary_examples: 2000000
+max_iter: 700000
+learning_rate_decay: 0.8
+l2_penalty: 1e-5
+gradient_clip_norm: 1.0
+use_gpu: True  # 是否使用GPU
+num_gpus: 4  # GPU个数
+batch_size: 160																 ```
+- 备注，在训练NeXtVLAD模型时使用的是4卡，请修改run.sh中的CUDA_VISIBLE_DEVICES=0,1,2,3
+#### 使用预训练模型做finetune
+将提供的预训练模型[model](https://paddlemodels.bj.bcebos.com/video_classification/nextvlad_youtube8m.tar.gz)下载到本地，并在上述脚本文件中添加--resume为所保存的模型参数存放路径。
 
-												 ```
-												     epoch: 6  # 迭代次数
-												         learning_rate: 0.0002  # 学习率
-													     lr_boundary_examples: 2000000
-													         max_iter: 700000
-														     learning_rate_decay: 0.8
-														         l2_penalty: 1e-5
-															     gradient_clip_norm: 1.0
-															         use_gpu: True  # 是否使用GPU
-																     num_gpus: 4  # GPU个数
-																         batch_size: 160
-																	 ```
+```
+python train.py --model_name=NEXTVLAD \
+--config=./configs/nextvlad.yaml \
+--pretrain=./pretrained_model/nextvlad_youtube8m/NEXTVLAD_epoch5/ \
+--log_interval=10 \
+--valid_interval=1 \
+--use_gpu=True \
+--save_dir=./data/checkpoints \
+--fix_random_seed=False
+```
 
-																	 - 备注，在训练NeXtVLAD模型时使用的是4卡，请修改run.sh中的CUDA_VISIBLE_DEVICES=0,1,2,3
+使用4卡Nvidia Tesla P40，总的batch size数是160。
 
-																	 #### 使用预训练模型做finetune
+#### 训练策略
 
-																	 将提供的预训练模型[model](https://paddlemodels.bj.bcebos.com/video_classification/nextvlad_youtube8m.tar.gz)下载到本地，并在上述脚本文件中添加--resume为所保存的模型参数存放路径。
+使用Adam优化器，初始learning_rate=0.0002
+每2,000,000个样本做一次学习率衰减，learning_rate_decay = 0.8
+正则化使用l2_weight_decay = 1e-5
 
-																	 ```
-																	 python train.py --model_name=NEXTVLAD \
-																	                 --config=./configs/nextvlad.yaml \
-																			                 --pretrain=./pretrained_model/nextvlad_youtube8m/NEXTVLAD_epoch5/ \
-																					                 --log_interval=10 \
-																							                 --valid_interval=1 \
-																									                 --use_gpu=True \
-																											                 --save_dir=./data/checkpoints \
-																													                 --fix_random_seed=False
-																															 ```
+#### 模型测试
 
-																															 使用4卡Nvidia Tesla P40，总的batch size数是160。
+可通过如下两种方式进行模型评估:
 
-																															 #### 训练策略
-																															 使用Adam优化器，初始learning_rate=0.0002
-																															 每2,000,000个样本做一次学习率衰减，learning_rate_decay = 0.8
-																															 正则化使用l2_weight_decay = 1e-5
+```
+python eval.py --model_name=NEXTVLAD \
+--config=./configs/nextvlad.yaml \
+--log_interval=1 \
+--weights=./data/model/NEXTVLAD_final.pdparams \
+--use_gpu=True
 
-																															 #### 模型测试
-																															 可通过如下两种方式进行模型评估:
+bash run.sh eval NEXTVLAD ./configs/nextvlad.yaml
+```
+	
+使用run.sh进行评估时，需要修改脚本中的weights参数指定需要评估的权重。
 
-																															 ```
-																															 python eval.py --model_name=NEXTVLAD \
-																															                --config=./configs/nextvlad.yaml \
-																																	               --log_interval=1 \
-																																		                      --weights=./data/model/NEXTVLAD_final.pdparams \
-																																				                     --use_gpu=True
+若未指定--weights参数，脚本会下载已发布模型model进行评估
 
-																																						     bash run.sh eval NEXTVLAD ./configs/nextvlad.yaml
-																																						     ```
+评估结果以log的形式直接打印输出GAP、Hit@1等精度指标
 
-																																						     使用run.sh进行评估时，需要修改脚本中的weights参数指定需要评估的权重。
+使用CPU进行评估时，请将use_gpu设置为False
 
-																																						     若未指定--weights参数，脚本会下载已发布模型model进行评估
-
-																																						     评估结果以log的形式直接打印输出GAP、Hit@1等精度指标
-
-																																						     使用CPU进行评估时，请将use_gpu设置为False
-
-																																						     由于youtube-8m提供的数据中test数据集是没有ground truth标签的，所以这里使用validation数据集来做测试。
+由于youtube-8m提供的数据中test数据集是没有ground truth标签的，所以这里使用validation数据集来做测试。
 
 
-																																						     #### 模型推断
+#### 模型推断
 
-																																						     可通过如下两种方式启动模型推断：
+可通过如下两种方式启动模型推断：
 
+	
+```
+python predict.py --model_name=NEXTVLAD \
+--config=configs/nextvlad.yaml \
+--log_interval=1 \
+--weights=./data/model/NEXTVLAD_final.pdparams \
+--filelist=./data/dataset/youtube8m/infer.list \
+--use_gpu=True
 
-																																						     ```
-																																						     python predict.py --model_name=NEXTVLAD \
-																																						                       --config=configs/nextvlad.yaml \
-																																								                         --log_interval=1 \
-																																											                   --weights=./data/model/NEXTVLAD_final.pdparams \
-																																													                     --filelist=./data/dataset/youtube8m/infer.list \
-																																															                       --use_gpu=True
+bash run.sh predict NEXTVLAD ./configs/nextvlad.yaml
+```
 
-																																																	       bash run.sh predict NEXTVLAD ./configs/nextvlad.yaml
-																																																	       ```
+使用python命令行启动程序时，--filelist参数指定待推断的文件列表，如果不设置，默认为data/dataset/youtube8m/infer.list。--weights参数为训练好的权重参数，如果不设置，程序会自动下载已训练好的权重。这两个参数如果不设置，请不要写在命令行，将会自动使用默 认值。
 
-																																																	       使用python命令行启动程序时，--filelist参数指定待推断的文件列表，如果不设置，默认为data/dataset/youtube8m/infer.list。--weights参数为训练好的权重参数，如果不设置，程序会自动下载已训练好的权重。这两个参数如果不设置，请不要写在命令行，将会自动使用默 认值。
+使用run.sh进行评估时，请修改脚本中的weights参数指定需要用到的权重。
 
-																																																	       使用run.sh进行评估时，请修改脚本中的weights参数指定需要用到的权重。
+若未指定--weights参数，脚本会下载已发布模型model进行推断
 
-																																																	       若未指定--weights参数，脚本会下载已发布模型model进行推断
+模型推断结果以log的形式直接打印输出，可以看到每个测试样本的分类预测概率。
 
-																																																	       模型推断结果以log的形式直接打印输出，可以看到每个测试样本的分类预测概率。
+使用CPU进行预测时，请将use_gpu设置为False
 
-																																																	       使用CPU进行预测时，请将use_gpu设置为False
-
-																																																	       百度Paddlevideo参考链接：
-																																																	       https://github.com/PaddlePaddle/models/tree/develop/PaddleCV/PaddleVideo/models/nextvlad#%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83
+百度Paddlevideo参考链接：
+https://github.com/PaddlePaddle/models/tree/develop/PaddleCV/PaddleVideo/models/nextvlad#%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83
 
 
 
