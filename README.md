@@ -133,8 +133,11 @@ l2_penalty: 1e-5
 gradient_clip_norm: 1.0
 use_gpu: True  # 是否使用GPU
 num_gpus: 4  # GPU个数
-batch_size: 160																 ```
+batch_size: 160
+```
+
 - 备注，在训练NeXtVLAD模型时使用的是4卡，请修改run.sh中的CUDA_VISIBLE_DEVICES=0,1,2,3
+
 #### 使用预训练模型做finetune
 将提供的预训练模型[model](https://paddlemodels.bj.bcebos.com/video_classification/nextvlad_youtube8m.tar.gz)下载到本地，并在上述脚本文件中添加--resume为所保存的模型参数存放路径。
 
@@ -210,18 +213,3 @@ bash run.sh predict NEXTVLAD ./configs/nextvlad.yaml
 
 百度Paddlevideo参考链接：
 https://github.com/PaddlePaddle/models/tree/develop/PaddleCV/PaddleVideo/models/nextvlad#%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
