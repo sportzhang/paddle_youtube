@@ -1,5 +1,5 @@
 # paddle_youtube
-使用百度Paddle框架进行视频分类算法NeXtVLAD视频分类模型。
+使用百度Paddle框架进行视频分类算法NeXtVLAD视频分类模型。（目前已经支持最新版框架）
 
 ### 百度飞浆视频分类算法
 
